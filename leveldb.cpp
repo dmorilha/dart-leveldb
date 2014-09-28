@@ -3,7 +3,6 @@
 #include <leveldb/db.h>
 
 #include "include/dart_api.h"
-//#include "include/dart_native_api.h"
 
 static Dart_Handle library;
 
