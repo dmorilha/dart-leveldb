@@ -72,6 +72,14 @@ Dart_Handle get(const DartArguments< N + 1 > & a) {
 }
 
 namespace leveldb {
+
+	template < int N, class T >
+	DB * getDB(const T & t) {
+		int64_t address;
+		Dart_IntegerToInt64(get< N >(t), &address);
+		return reinterpret_cast< DB::DB * >(address);
+	}
+
 	void GetMajorVersion(Dart_NativeArguments arguments) {
 		DartScope scope;
 		Dart_Handle result = HandleError(Dart_NewInteger(leveldb::kMajorVersion));
@@ -107,13 +115,7 @@ namespace leveldb {
 	void Put(Dart_NativeArguments a) {
 		DartArguments< 4 > arguments(a);
 
-		DB::DB * db;
-
-		{
-			int64_t address;
-			Dart_IntegerToInt64(get< 0 >(arguments), &address);
-			db = reinterpret_cast< DB::DB * >(address);
-		}
+		DB::DB * db = getDB< 0 >(arguments);
 
 		Status status;
 
@@ -136,13 +138,7 @@ namespace leveldb {
 		const char * key;
 		Dart_StringToCString(get< 1 >(arguments), &key);
 
-		DB::DB * db;
-
-		{
-			int64_t address;
-			Dart_IntegerToInt64(get< 0 >(arguments), &address);
-			db = reinterpret_cast< DB::DB * >(address);
-		}
+		DB::DB * db = getDB< 0 >(arguments);
 
 		Status status;
 		Dart_Handle result = Dart_Null();
@@ -162,13 +158,7 @@ namespace leveldb {
 		const char * key;
 		Dart_StringToCString(get< 1 >(arguments), &key);
 
-		DB::DB * db;
-
-		{
-			int64_t address;
-			Dart_IntegerToInt64(get< 0 >(arguments), &address);
-			db = reinterpret_cast< DB::DB * >(address);
-		}
+		DB::DB * db = getDB< 0 >(arguments);
 
 		Status status;
 
@@ -182,13 +172,7 @@ namespace leveldb {
 	void First(Dart_NativeArguments a) {
 		DartArguments< 2 > arguments(a);
 
-		DB::DB * db;
-
-		{
-			int64_t address;
-			Dart_IntegerToInt64(get< 0 >(arguments), &address);
-			db = reinterpret_cast< DB::DB * >(address);
-		}
+		DB::DB * db = getDB< 0 >(arguments);
 
 		Status status;
 		Iterator * iterator = NULL;
@@ -208,13 +192,7 @@ namespace leveldb {
 	void Last(Dart_NativeArguments a) {
 		DartArguments< 2 > arguments(a);
 
-		DB::DB * db;
-
-		{
-			int64_t address;
-			Dart_IntegerToInt64(get< 0 >(arguments), &address);
-			db = reinterpret_cast< DB::DB * >(address);
-		}
+		DB::DB * db = getDB< 0 >(arguments);
 
 		Status status;
 		Iterator * iterator = NULL;
@@ -234,13 +212,7 @@ namespace leveldb {
 	void Seek(Dart_NativeArguments a) {
 		DartArguments< 3 > arguments(a);
 
-		DB::DB * db;
-
-		{
-			int64_t address;
-			Dart_IntegerToInt64(get< 0 >(arguments), &address);
-			db = reinterpret_cast< DB::DB * >(address);
-		}
+		DB::DB * db = getDB< 0 >(arguments);
 
 		Status status;
 		Iterator * iterator = NULL;
