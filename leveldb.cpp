@@ -3,7 +3,7 @@
 #include <leveldb/db.h>
 
 #include "include/dart_api.h"
-#include "include/dart_native_api.h"
+//#include "include/dart_native_api.h"
 
 static Dart_Handle library;
 
@@ -180,6 +180,58 @@ namespace leveldb {
 		Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(status.ok())));
 	}
 
+	void First(Dart_NativeArguments a) {
+		DartArguments< 2 > arguments(a);
+
+		DB::DB * db;
+
+		{
+			int64_t address;
+			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			db = reinterpret_cast< DB::DB * >(address);
+		}
+
+		Status status;
+		Iterator * iterator = NULL;
+
+		if (db) {
+			iterator = db->NewIterator(ReadOptions());
+
+			if (iterator) {
+				iterator->SeekToFirst();
+			}
+		}
+
+		Dart_SetReturnValue(arguments,
+			HandleError(Dart_NewInteger(reinterpret_cast< int64_t >(iterator))));
+	}
+
+	void Last(Dart_NativeArguments a) {
+		DartArguments< 2 > arguments(a);
+
+		DB::DB * db;
+
+		{
+			int64_t address;
+			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			db = reinterpret_cast< DB::DB * >(address);
+		}
+
+		Status status;
+		Iterator * iterator = NULL;
+
+		if (db) {
+			iterator = db->NewIterator(ReadOptions());
+
+			if (iterator) {
+				iterator->SeekToLast();
+			}
+		}
+
+		Dart_SetReturnValue(arguments,
+			HandleError(Dart_NewInteger(reinterpret_cast< int64_t >(iterator))));
+	}
+
 	void Seek(Dart_NativeArguments a) {
 		DartArguments< 3 > arguments(a);
 
@@ -218,9 +270,67 @@ namespace leveldb {
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
+			if (iterator && iterator->Valid()) {
+				const std::string key = iterator->key().ToString();
+				Dart_SetReturnValue(arguments,
+					HandleError(Dart_NewStringFromCString(key.c_str())));
+			}
+		}
+
+		void Next(Dart_NativeArguments a) {
+			DartArguments< 1 > arguments(a);
+			Iterator * iterator = NULL;
+
+			{
+				int64_t address;
+				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				iterator = reinterpret_cast< Iterator * >(address);
+			}
+
+			bool valid = false;
+
+			if (iterator && iterator->Valid()) {
+				iterator->Next();
+				valid = iterator->Valid();
+			}
+
+			Dart_SetReturnValue(arguments, Dart_NewBoolean(valid));
+		}
+
+		void Prev(Dart_NativeArguments a) {
+			DartArguments< 1 > arguments(a);
+			Iterator * iterator = NULL;
+
+			{
+				int64_t address;
+				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				iterator = reinterpret_cast< Iterator * >(address);
+			}
+
+			bool valid = false;
+
+			if (iterator && iterator->Valid()) {
+				iterator->Prev();
+				valid = iterator->Valid();
+			}
+
+			Dart_SetReturnValue(arguments, Dart_NewBoolean(valid));
+		}
+
+		void Valid(Dart_NativeArguments a) {
+			DartArguments< 1 > arguments(a);
+			Iterator * iterator = NULL;
+
+			{
+				int64_t address;
+				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				iterator = reinterpret_cast< Iterator * >(address);
+			}
+
 			if (iterator) {
-				Slice key = iterator->key();
-				Dart_SetReturnValue(arguments, Dart_NewStringFromCString(key.data()));
+				const bool valid = iterator->Valid();
+				Dart_SetReturnValue(arguments,
+					HandleError(Dart_NewBoolean(valid)));
 			}
 		}
 
@@ -234,9 +344,10 @@ namespace leveldb {
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
-			if (iterator) {
-				Slice value = iterator->value();
-				Dart_SetReturnValue(arguments, Dart_NewStringFromCString(value.data()));
+			if (iterator && iterator->Valid()) {
+				const std::string value = iterator->value().ToString();
+				Dart_SetReturnValue(arguments,
+					HandleError(Dart_NewStringFromCString(value.c_str())));
 			}
 		}
 	}
@@ -249,11 +360,16 @@ struct FunctionLookup {
 
 FunctionLookup function_list[] = {
 	{ "delete", leveldb::Delete },
-	{ "iteratorKey", leveldb::iterator::Key },
-	{ "iteratorValue", leveldb::iterator::Value },
+	{ "first", leveldb::First},
 	{ "get", leveldb::Get },
 	{ "getMajorVersion", leveldb::GetMajorVersion },
 	{ "getMinorVersion", leveldb::GetMinorVersion },
+	{ "iteratorKey", leveldb::iterator::Key },
+	{ "iteratorNext", leveldb::iterator::Next },
+	{ "iteratorPrev", leveldb::iterator::Prev },
+	{ "iteratorValid", leveldb::iterator::Valid },
+	{ "iteratorValue", leveldb::iterator::Value },
+	{ "last", leveldb::Last },
 	{ "open", leveldb::Open },
 	{ "put", leveldb::Put },
 	{ "seek", leveldb::Seek },

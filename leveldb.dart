@@ -1,7 +1,6 @@
 library leveldb;
 
 import 'dart-ext:leveldb';
-import 'dart:math';
 
 int getMajorVersion() native "getMajorVersion";
 int getMinorVersion() native "getMinorVersion";
@@ -11,9 +10,16 @@ bool _put(db, key, value, options) native "put";
 int _open(path, options) native "open";
 string _get(db, key, options) native "get";
 int _seek(db, key, options) native "seek";
+int _first(db, options) native "first";
+int _last(db, options) native "last";
 
+bool _iteratorValid(iterator) native "iteratorValid";
+bool _iteratorNext(iterator) native "iteratorNext";
+bool _iteratorPrev(iterator) native "iteratorPrev";
 string _iteratorKey(iterator) native "iteratorKey";
 string _iteratorValue(iterator) native "iteratorValue";
+
+class LevelDBException extends Exception { }
 
 class Options {
   bool create_if_missing;
@@ -27,6 +33,7 @@ class Options {
 
 class ReadOptions { }
 class WriteOptions { }
+
 class WriteBatch { }
 
 class Snapshot { }
@@ -38,43 +45,65 @@ class Record {
   Record(this.handle);
   string get key => _iteratorKey(handle);
   string get value => _iteratorValue(handle);
+  string toString() => "$key => $value";
 }
 
 class RecordIterator implements Iterator<Record> {
-  Record current;
-  RecordIterator(int handle) { current = new Record(handle); }
-  bool moveFirst() => _iteratorNext(current);
-  bool moveLast() => _iterator(current);
-  bool moveNext() => _iteratorNext(current);
-  bool movePrev() => _iterator(current);
+  final Record current;
+  bool _first;
+  RecordIterator(this.current) { _first = true; }
+
+  bool moveNext() {
+    bool result = true;
+
+    if ( ! _first) {
+      result = _iteratorNext(current.handle);
+
+    } else {
+      _first = false;
+    }
+
+    return result;
+  }
+}
+
+class Records implements Iterable<Record> {
+  final RecordIterator iterator;
+  Records(this.iterator);
 }
 
 class DB {
-  final int _handle;
-  final string _path;
-
-  string get path => _path;
+  final int db;
+  final string path;
 
   static DB Open(string path, [ Options options ]) {
     return new DB._internal(_open(path, options), path);
   }
 
-  DB._internal(this._handle, this._path);
+  DB._internal(this.db, this.path);
 
   bool Put(string key, string value, [ WriteOptions options ]) {
-    return _put(_handle, key, value, options);
+    return _put(db, key, value, options);
   }
 
   string Get(string key, [ ReadOptions options ]) {
-    return _get(_handle, key, options);
+    return _get(db, key, options);
   }
   
   bool Delete(string key, [ WriteOptions options ]) {
-    return _delete(_handle, key, options);
+    return _delete(db, key, options);
   }
 
   RecordIterator Seek(string key, [ ReadOptions options ]) {
-    return new RecordIterator(_seek(_handle, key, options));
+    return new RecordIterator(new Record(_seek(db, key, options)));
+  }
+
+  RecordIterator SeekToFirst([ ReadOptions options ]) {
+    return new RecordIterator(new Record(_first(db, options)));
+  }
+
+  RecordIterator SeekToLast([ ReadOptions options ]) {
+    return new RecordIterator(new Record(_last(db, options)));
   }
 
   Snapshot GetSnapshot() { }
@@ -84,35 +113,5 @@ class DB {
   void CompactRange(Slice begin, Slice end) { }
 }
 
-bool DestroyDB(string name, Options options) { }
-
-bool RepairDB(string dbname, Options options) { }
-
-void main() {
-  final int major = getMajorVersion(),
-      minor = getMinorVersion();
-
-  string value;
-  final int random = (new Random()).nextInt(1024);
-
-  print("Hello There");
-  print("leveldb version: $major.$minor");
-
-  var db = DB.Open("/tmp/leveldb.db");
-
-  db.Put("number", "$random");
-
-  value = db.Get("number");
-  print("number => $value");
-
-  RecordIterator iterator = db.Seek("number");
-  value = iterator.current.value;
-  print("iterator => $value");
-
-  db.Delete("number");
-
-  value = db.Get("number");
-  print("number => $value");
-
-
-}
+bool DestroyDB(string name, [ Options options ]) { }
+bool RepairDB(string name, [ Options options ]) { }
