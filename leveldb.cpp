@@ -91,7 +91,7 @@ namespace leveldb {
 		const static Dart_Handle statusClass = Dart_GetClass(library, Dart_NewStringFromCString("Status"));
 
 		const char * path;
-		Dart_StringToCString(::get< 0 >(arguments), &path);
+		Dart_StringToCString(get< 0 >(arguments), &path);
 
 		DB::DB * db;
 		Status status;
@@ -111,7 +111,7 @@ namespace leveldb {
 
 		{
 			int64_t address;
-			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			Dart_IntegerToInt64(get< 0 >(arguments), &address);
 			db = reinterpret_cast< DB::DB * >(address);
 		}
 
@@ -121,8 +121,8 @@ namespace leveldb {
 			const char * key,
 				* value;
 
-			Dart_StringToCString(::get< 1 >(arguments), &key);
-			Dart_StringToCString(::get< 2 >(arguments), &value);
+			Dart_StringToCString(get< 1 >(arguments), &key);
+			Dart_StringToCString(get< 2 >(arguments), &value);
 
 			status = db->Put(WriteOptions(), key, value);
 		}
@@ -134,13 +134,13 @@ namespace leveldb {
 		DartArguments< 3 > arguments(a);
 
 		const char * key;
-		Dart_StringToCString(::get< 1 >(arguments), &key);
+		Dart_StringToCString(get< 1 >(arguments), &key);
 
 		DB::DB * db;
 
 		{
 			int64_t address;
-			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			Dart_IntegerToInt64(get< 0 >(arguments), &address);
 			db = reinterpret_cast< DB::DB * >(address);
 		}
 
@@ -160,13 +160,13 @@ namespace leveldb {
 		DartArguments< 3 > arguments(a);
 
 		const char * key;
-		Dart_StringToCString(::get< 1 >(arguments), &key);
+		Dart_StringToCString(get< 1 >(arguments), &key);
 
 		DB::DB * db;
 
 		{
 			int64_t address;
-			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			Dart_IntegerToInt64(get< 0 >(arguments), &address);
 			db = reinterpret_cast< DB::DB * >(address);
 		}
 
@@ -186,7 +186,7 @@ namespace leveldb {
 
 		{
 			int64_t address;
-			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			Dart_IntegerToInt64(get< 0 >(arguments), &address);
 			db = reinterpret_cast< DB::DB * >(address);
 		}
 
@@ -212,7 +212,7 @@ namespace leveldb {
 
 		{
 			int64_t address;
-			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			Dart_IntegerToInt64(get< 0 >(arguments), &address);
 			db = reinterpret_cast< DB::DB * >(address);
 		}
 
@@ -238,7 +238,7 @@ namespace leveldb {
 
 		{
 			int64_t address;
-			Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+			Dart_IntegerToInt64(get< 0 >(arguments), &address);
 			db = reinterpret_cast< DB::DB * >(address);
 		}
 
@@ -250,7 +250,7 @@ namespace leveldb {
 
 			if (iterator) {
 				const char * key;
-				Dart_StringToCString(::get< 1 >(arguments), &key);
+				Dart_StringToCString(get< 1 >(arguments), &key);
 				iterator->Seek(key);
 			}
 		}
@@ -265,7 +265,7 @@ namespace leveldb {
 
 			{
 				int64_t address;
-				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				Dart_IntegerToInt64(get< 0 >(arguments), &address);
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
@@ -282,7 +282,7 @@ namespace leveldb {
 
 			{
 				int64_t address;
-				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				Dart_IntegerToInt64(get< 0 >(arguments), &address);
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
@@ -302,7 +302,7 @@ namespace leveldb {
 
 			{
 				int64_t address;
-				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				Dart_IntegerToInt64(get< 0 >(arguments), &address);
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
@@ -322,7 +322,7 @@ namespace leveldb {
 
 			{
 				int64_t address;
-				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				Dart_IntegerToInt64(get< 0 >(arguments), &address);
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
@@ -339,7 +339,7 @@ namespace leveldb {
 
 			{
 				int64_t address;
-				Dart_IntegerToInt64(::get< 0 >(arguments), &address);
+				Dart_IntegerToInt64(get< 0 >(arguments), &address);
 				iterator = reinterpret_cast< Iterator * >(address);
 			}
 
