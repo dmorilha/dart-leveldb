@@ -1,6 +1,7 @@
 library leveldb;
 
 import 'dart-ext:leveldb';
+import 'dart:nativewrappers';
 
 int getMajorVersion() native "getMajorVersion";
 int getMinorVersion() native "getMinorVersion";
@@ -10,8 +11,8 @@ bool _put(db, key, value, options) native "put";
 int _open(path, options) native "open";
 string _get(db, key, options) native "get";
 int _seek(db, key, options) native "seek";
-int _first(db, options) native "first";
-int _last(db, options) native "last";
+int _seekToFirst(db, options) native "seekToFirst";
+int _seekToLast(db, options) native "seekToLast";
 
 bool _iteratorValid(iterator) native "iteratorValid";
 bool _iteratorNext(iterator) native "iteratorNext";
@@ -40,16 +41,14 @@ class Snapshot { }
 
 class Range { }
 
-class Record {
-  final int handle;
-  Record(this.handle);
-  string get key => _iteratorKey(handle);
-  string get value => _iteratorValue(handle);
+class Iterator extends NativeFieldWrapperClass1 {
+  string get key => _iteratorKey(this);
+  string get value => _iteratorValue(this);
   string toString() => "$key => $value";
 }
 
 class RecordIterator implements Iterator<Record> {
-  final Record current;
+  final Iterator current;
   bool _first;
   RecordIterator(this.current) { _first = true; }
 
@@ -57,7 +56,7 @@ class RecordIterator implements Iterator<Record> {
     bool result = true;
 
     if ( ! _first) {
-      result = _iteratorNext(current.handle);
+      result = _iteratorNext(current);
 
     } else {
       _first = false;
@@ -72,38 +71,33 @@ class Records implements Iterable<Record> {
   Records(this.iterator);
 }
 
-class DB {
-  final int db;
+class DB extends NativeFieldWrapperClass1 {
   final string path;
 
   static DB Open(string path, [ Options options ]) {
-    return new DB._internal(_open(path, options), path);
+    return _open(path, options);
   }
 
-  DB._internal(this.db, this.path);
+  DB._internal(this.path);
 
   bool Put(string key, string value, [ WriteOptions options ]) {
-    return _put(db, key, value, options);
+    return _put(this, key, value, options);
   }
 
   string Get(string key, [ ReadOptions options ]) {
-    return _get(db, key, options);
+    return _get(this, key, options);
   }
-  
+
   bool Delete(string key, [ WriteOptions options ]) {
-    return _delete(db, key, options);
+    return _delete(this, key, options);
   }
 
   RecordIterator Seek(string key, [ ReadOptions options ]) {
-    return new RecordIterator(new Record(_seek(db, key, options)));
+    return new RecordIterator(_seek(this, key, options));
   }
 
   RecordIterator SeekToFirst([ ReadOptions options ]) {
-    return new RecordIterator(new Record(_first(db, options)));
-  }
-
-  RecordIterator SeekToLast([ ReadOptions options ]) {
-    return new RecordIterator(new Record(_last(db, options)));
+    return new RecordIterator(_seekToFirst(this, options));
   }
 
   Snapshot GetSnapshot() { }

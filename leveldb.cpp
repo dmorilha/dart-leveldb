@@ -3,6 +3,7 @@
 #include <leveldb/db.h>
 
 #include "include/dart_api.h"
+#include "include/dart_native_api.h"
 
 static Dart_Handle library;
 
@@ -75,9 +76,38 @@ namespace leveldb {
 
 	template < int N, class T >
 	DB * getDB(const T & t) {
-		int64_t address;
-		Dart_IntegerToInt64(get< N >(t), &address);
-		return reinterpret_cast< DB::DB * >(address);
+
+		const static Dart_Handle DBClass = Dart_GetClass(library, Dart_NewStringFromCString("DB"));
+
+		DB * db = NULL;
+		const Dart_Handle object = get< N >(t);
+
+		bool result = false;
+
+		if ( ! Dart_IsError(Dart_ObjectIsType(object, DBClass, &result)) && result) {
+			HandleError(Dart_GetNativeInstanceField(object, 0,
+				reinterpret_cast< intptr_t * >(&db)));
+		}
+
+		return db;
+	}
+
+	template < int N, class T >
+	Iterator * getIterator(const T & t) {
+
+		const static Dart_Handle IteratorClass = Dart_GetClass(library, Dart_NewStringFromCString("Iterator"));
+
+		Iterator * iterator = NULL;
+		const Dart_Handle object = get< N >(t);
+
+		bool result = false;
+
+		if ( ! Dart_IsError(Dart_ObjectIsType(object, IteratorClass, &result)) && result) {
+			HandleError(Dart_GetNativeInstanceField(object, 0,
+				reinterpret_cast< intptr_t * >(&iterator)));
+		}
+
+		return iterator;
 	}
 
 	void GetMajorVersion(Dart_NativeArguments arguments) {
@@ -95,6 +125,7 @@ namespace leveldb {
 	void Open(Dart_NativeArguments a) {
 		DartArguments< 3 > arguments(a);
 
+		const static Dart_Handle DBClass = Dart_GetClass(library, Dart_NewStringFromCString("DB"));
 		const static Dart_Handle optionsClass = Dart_GetClass(library, Dart_NewStringFromCString("Options"));
 		const static Dart_Handle statusClass = Dart_GetClass(library, Dart_NewStringFromCString("Status"));
 
@@ -108,8 +139,11 @@ namespace leveldb {
 		options.create_if_missing = true;
 
 		status = DB::Open(options, path, &db);
+		Dart_Handle object = Dart_AllocateWithNativeFields(DBClass, 1, reinterpret_cast< const intptr_t * >(&db));
+		Dart_Handle dartPath = Dart_NewStringFromCString(path);
+		Dart_InvokeConstructor(object, Dart_NewStringFromCString("_internal"), 1, &dartPath);
 
-		Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(reinterpret_cast< int64_t >(db))));
+		Dart_SetReturnValue(arguments, HandleError(object));
 	}
 
 	void Put(Dart_NativeArguments a) {
@@ -169,77 +203,70 @@ namespace leveldb {
 		Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(status.ok())));
 	}
 
-	void First(Dart_NativeArguments a) {
-		DartArguments< 2 > arguments(a);
+	template < class T >
+	static void WeakPersistentHandleCallback(void * isolate_callback_data,
+		Dart_WeakPersistentHandle handle, void * peer) {
 
-		DB::DB * db = getDB< 0 >(arguments);
-
-		Status status;
-		Iterator * iterator = NULL;
-
-		if (db) {
-			iterator = db->NewIterator(ReadOptions());
-
-			if (iterator) {
-				iterator->SeekToFirst();
-			}
+		if (peer != NULL) {
+			delete static_cast< T * >(peer);
 		}
-
-		Dart_SetReturnValue(arguments,
-			HandleError(Dart_NewInteger(reinterpret_cast< int64_t >(iterator))));
 	}
 
-	void Last(Dart_NativeArguments a) {
-		DartArguments< 2 > arguments(a);
+	template < int N, class T >
+	Iterator * createIterator(T & arguments) {
+		static const Dart_Handle IteratorClass = Dart_GetClass(library, Dart_NewStringFromCString("Iterator"));
 
-		DB::DB * db = getDB< 0 >(arguments);
-
-		Status status;
 		Iterator * iterator = NULL;
+		DB::DB * db = getDB< N >(arguments);
 
 		if (db) {
+
 			iterator = db->NewIterator(ReadOptions());
 
 			if (iterator) {
-				iterator->SeekToLast();
+				Dart_Handle object = Dart_AllocateWithNativeFields(IteratorClass, 1, reinterpret_cast< const intptr_t * >(&iterator));
+				Dart_NewWeakPersistentHandle(object, iterator, sizeof(Iterator), WeakPersistentHandleCallback< Iterator >);
+				Dart_SetReturnValue(arguments, object);
 			}
 		}
 
-		Dart_SetReturnValue(arguments,
-			HandleError(Dart_NewInteger(reinterpret_cast< int64_t >(iterator))));
+		return iterator;
+	}
+
+	void SeekToFirst(Dart_NativeArguments a) {
+		DartArguments< 2 > arguments(a);
+		Iterator * iterator = createIterator< 0 >(arguments);
+
+		if (iterator) {
+			iterator->SeekToFirst();
+		}
+	}
+
+	void SeekToLast(Dart_NativeArguments a) {
+		DartArguments< 2 > arguments(a);
+		Iterator * iterator = createIterator< 0 >(arguments);
+
+		if (iterator) {
+			iterator->SeekToLast();
+		}
 	}
 
 	void Seek(Dart_NativeArguments a) {
 		DartArguments< 3 > arguments(a);
+		Iterator * iterator = createIterator< 0 >(arguments);
 
-		DB::DB * db = getDB< 0 >(arguments);
-
-		Status status;
-		Iterator * iterator = NULL;
-
-		if (db) {
-			iterator = db->NewIterator(ReadOptions());
-
-			if (iterator) {
-				const char * key;
-				Dart_StringToCString(get< 1 >(arguments), &key);
+		if (iterator) {
+			const char * key;
+			if ( ! Dart_IsError(Dart_StringToCString(get< 1 >(arguments), &key)) && key) {
 				iterator->Seek(key);
 			}
 		}
-
-		Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(reinterpret_cast< int64_t >(iterator))));
 	}
 
 	namespace iterator {
 		void Key(Dart_NativeArguments a) {
 			DartArguments< 1 > arguments(a);
-			Iterator * iterator = NULL;
-
-			{
-				int64_t address;
-				Dart_IntegerToInt64(get< 0 >(arguments), &address);
-				iterator = reinterpret_cast< Iterator * >(address);
-			}
+			Iterator * iterator = getIterator< 0 >(arguments);
 
 			if (iterator && iterator->Valid()) {
 				const std::string key = iterator->key().ToString();
@@ -250,13 +277,7 @@ namespace leveldb {
 
 		void Next(Dart_NativeArguments a) {
 			DartArguments< 1 > arguments(a);
-			Iterator * iterator = NULL;
-
-			{
-				int64_t address;
-				Dart_IntegerToInt64(get< 0 >(arguments), &address);
-				iterator = reinterpret_cast< Iterator * >(address);
-			}
+			Iterator * iterator = getIterator< 0 >(arguments);
 
 			bool valid = false;
 
@@ -270,13 +291,7 @@ namespace leveldb {
 
 		void Prev(Dart_NativeArguments a) {
 			DartArguments< 1 > arguments(a);
-			Iterator * iterator = NULL;
-
-			{
-				int64_t address;
-				Dart_IntegerToInt64(get< 0 >(arguments), &address);
-				iterator = reinterpret_cast< Iterator * >(address);
-			}
+			Iterator * iterator = getIterator< 0 >(arguments);
 
 			bool valid = false;
 
@@ -307,13 +322,7 @@ namespace leveldb {
 
 		void Value(Dart_NativeArguments a) {
 			DartArguments< 1 > arguments(a);
-			Iterator * iterator = NULL;
-
-			{
-				int64_t address;
-				Dart_IntegerToInt64(get< 0 >(arguments), &address);
-				iterator = reinterpret_cast< Iterator * >(address);
-			}
+			Iterator * iterator = getIterator< 0 >(arguments);
 
 			if (iterator && iterator->Valid()) {
 				const std::string value = iterator->value().ToString();
@@ -331,7 +340,6 @@ struct FunctionLookup {
 
 FunctionLookup function_list[] = {
 	{ "delete", leveldb::Delete },
-	{ "first", leveldb::First},
 	{ "get", leveldb::Get },
 	{ "getMajorVersion", leveldb::GetMajorVersion },
 	{ "getMinorVersion", leveldb::GetMinorVersion },
@@ -340,10 +348,11 @@ FunctionLookup function_list[] = {
 	{ "iteratorPrev", leveldb::iterator::Prev },
 	{ "iteratorValid", leveldb::iterator::Valid },
 	{ "iteratorValue", leveldb::iterator::Value },
-	{ "last", leveldb::Last },
 	{ "open", leveldb::Open },
 	{ "put", leveldb::Put },
 	{ "seek", leveldb::Seek },
+	{ "seekToFirst", leveldb::SeekToFirst},
+	{ "seekToLast", leveldb::SeekToLast },
 	{ NULL, NULL },
 };
 
